@@ -1,0 +1,37 @@
+import pandas as pd
+import jieba
+import pyecharts as pec
+from pyecharts import options as opts
+from pyecharts.charts import Page, WordCloud
+from pyecharts.globals import SymbolType
+import openpyxl
+
+word_filter = ['object','Index','dtype','优先','使用','进行','熟练','良好','相关','熟悉','支持','完成','具有','数据分析','经验',
+               '资格','具备','任职','开发','金融','行业']
+job_information = pd.read_csv('job_information.csv')
+jd_keywords_list = job_information['jd_keywords']
+jd_keywords_str_all = ''
+for keywords in jd_keywords_list:
+    jd_keywords_str_all += keywords + '\n'
+jd_keywords_str_all = jd_keywords_str_all.strip().replace(' ','').replace('\'','').replace(',','').replace('\n','')
+seg_list = list(jieba.cut(jd_keywords_str_all))
+#print(seg_list)
+jd_keywords_counts = pd.Series(seg_list)
+jd_keywords_counts = jd_keywords_counts[jd_keywords_counts.str.len()>1]
+jd_keywords_counts = jd_keywords_counts[~jd_keywords_counts.str.contains('|'.join(word_filter))]
+jd_keywords_counts = jd_keywords_counts.value_counts().sort_values(ascending=False)[:20]
+
+jd_keywords_counts_df = pd.DataFrame({
+    'keywords':jd_keywords_counts.index,
+    'counts':jd_keywords_counts.values
+})
+print(jd_keywords_counts_df)
+jd_keywords_counts_df.to_excel('数据分析岗位最需要的20项技能.xlsx')
+
+jd_keywords = list(jd_keywords_counts_df['keywords'])
+jd_keywords_num = list(jd_keywords_counts_df['counts'])
+wordcloud_list = [(jd_keywords[i],jd_keywords_num[i]) for i in range(0,20)]
+
+wordcloud = WordCloud()
+wordcloud.add("",wordcloud_list,shape='diamond',word_size_range=[20,100]).set_global_opts(title_opts=opts.TitleOpts(title="数据分析岗位最需要的20项技能"))
+wordcloud.render()
